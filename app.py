@@ -16,7 +16,6 @@ OAUTH2_DEVICE_CODE_URL = 'https://oauth2.googleapis.com/device/code'
 OAUTH2_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 CLIENT_ID = '627431331381.apps.googleusercontent.com'
 CLIENT_SECRET = 'O_HOjELPNFcHO_n_866hamcO'
-REDIRECT_URI = 'http://yourapp.com/o/oauth2/callback'
 invidious = Invidious()
 innerTube = InnerTube()
 
