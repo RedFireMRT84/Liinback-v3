@@ -409,7 +409,31 @@ def wtw(oauth_token):
     if response.status_code == 200:
         data = response.json()
         return jsonify(data);
-        
+
+@app.route('/api/v2/channels/<oauth_token>', methods=['GET'])
+def channels_(oauth_token):
+    innerTube = InnerTube()
+    url = f'https://www.youtube.com/youtubei/v1/browse?browseId=FEchannels&key=AIzaS=yAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&access_token={oauth_token}'
+    headers = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    payload = {
+        "context": {
+            "client": {
+                "hl": "en",
+                "gl": "US",
+                "clientName": "WEB",
+                "clientVersion": "2.20210714.01.00"
+            }
+        }
+    }
+    
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code == 200:
+        data = response.json()
+        return jsonify(data);
+    
 @app.route('/api/v2/subscriptions/<oauth_token>', methods=['GET'])
 def subscriptions(oauth_token):
     innerTube = InnerTube()
@@ -697,9 +721,38 @@ def leanback_ajax():
                                     'thumbnail': thumbnail_url,
                                     'title': title_metadata
                                 })
-            return jsonify(response), 200
-        
-        return Response('Failed to fetch playlists', status=500)
+
+        else:
+            return Response('Failed to fetch playlists', status=500)
+        subscriptions_url = f'https://www.youtube.com/youtubei/v1/browse?browseId=FEchannels&key=AIzaS=yAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&access_token={oauth_token}'
+        subscriptionsData = requests.post(subscriptions_url, json=payload, headers=headers)
+
+        if subscriptionsData.status_code == 200:
+            data = subscriptionsData.json()
+            for item in data.get('contents', {}).get('twoColumnBrowseResultsRenderer', {}).get('tabs', []):
+                tab_content = item.get('tabRenderer', {}).get('content', {}).get('sectionListRenderer', {}).get('contents', [])
+                for section in tab_content:
+                    if 'itemSectionRenderer' in section:
+                        channel_data = section.get('itemSectionRenderer', {}).get('contents', [])
+                        for channel in channel_data:
+                            if 'shelfRenderer' in channel:
+                                channel_info = channel.get('shelfRenderer', {}).get('content', {}).get('expandedShelfContentsRenderer', {}).get('items', [])
+                                for channel_item in channel_info:
+                                    channel_renderer = channel_item.get('channelRenderer', {})
+                                    if channel_renderer:
+                                        author_name = channel_renderer.get('title', {}).get('simpleText', '')
+                                        author_id = channel_renderer.get('channelId', '')
+
+                                        if author_name and author_id:
+                                            response['sets'].insert(0, {
+                                                'gdata_url': f'http://{ip}:{port}/api/channels/{author_id}/uploads',
+                                                'thumbnail': f'http://{ip}:{port}/api/thumbnails/channels/{author_id}/uploads',
+                                                'title': f'{author_name}'
+                                            })
+                return jsonify(response)
+        else:
+            return Response('Failed to fetch subscriptions', status=500)
+
     return jsonify(response), 200
 
 def fetchAndServeMusicThumbnail(ip, port, lang):
@@ -925,6 +978,24 @@ def fetchAndServePopularThumbnail(ip, port, type=None):
     except Exception as e:
         print("Error processing feed data:", e)
         return "Error processing feed data", 500
+
+def fetchAndServeChannelUploadsThumbnail2(ip, port, author_id):
+    channel_uploads_url = f"http://{ip}:{port}/api/channels/{author_id}/uploads"
+    print('Downloading feed from:', channel_uploads_url)
+    try:
+        response = requests.get(channel_uploads_url)
+        response.raise_for_status()
+        data = response.text
+        thumbnail_match = re.search(r"<media:thumbnail yt:name='mqdefault' url='(.*?)'", data)
+        thumbnail_url = thumbnail_match.group(1) if thumbnail_match else None
+        if thumbnail_url:
+            return redirect(thumbnail_url, code=302)
+        else:
+            default_image_url = 'http://i.ytimg.com/vi/e/0.jpg'
+            return redirect(default_image_url, code=302)
+    except Exception as e:
+        print("Error processing feed data:", e)
+        return "Error processing feed data", 500
     
 def fetchAndServeChannelUploadsThumbnail(ip, port, channel_id):
     channel_uploads_url = f"http://{ip}:{port}/api/channels/{channel_id}/uploads"
@@ -956,6 +1027,12 @@ def getAuthorName(ip, port, channel_id):
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
         return None
+
+@app.route('/api/thumbnails/channels/<author_id>/uploads', methods=['GET'])
+def _channel_uploads_thumbnail(author_id):
+    ip = getIp()
+    port = getPort()
+    return fetchAndServeChannelUploadsThumbnail2(ip, port, author_id)
         
 @app.route('/api/thumbnails/channels/<channel_id>/uploads', methods=['GET'])
 def channel_uploads_thumbnail(channel_id):
