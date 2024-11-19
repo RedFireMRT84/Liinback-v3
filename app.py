@@ -101,6 +101,13 @@ def userUploads_oauthToken():
                 return redirect(f'/api/channels/{channel_id}/uploads')
         return jsonify({"error": "No channel data found"}), 404
     return jsonify({"error": "Failed to fetch user data"}), response.status_code
+@app.route('/api/v2/watch_history', methods=['GET'])
+def __watchHistory2():
+    ip = getIp()
+    port = getPort()
+    lang = request.args.get('lang')
+    oauth_token = request.args.get('access_token')
+    return innerTube.watchHistory2(ip, port, lang, oauth_token)
 @app.route('/api/watch_history', methods=['GET'])
 def _watchHistory():
     ip = getIp()
