@@ -248,7 +248,49 @@ class InnerTube:
 
         return Response('Failed to fetch playlists', status=500)
 
-    def buildWatchHistoryXML(self, ip, port, json_data):
+    def buildWatchHistory2XML(self, json_data, ip, port):
+        xml_string = '<?xml version="1.0" encoding="UTF-8"?>'
+        xml_string += '<feed xmlns:openSearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:yt="http://www.youtube.com/xml/schemas/2015">'
+        xml_string += '<title type="text">Videos</title>'
+        xml_string += '<generator ver="1.0" uri="http://kamil.cc/">Liinback data API</generator>'
+        xml_string += '<openSearch:totalResults>0</openSearch:totalResults>'
+        xml_string += '<openSearch:startIndex>1</openSearch:startIndex>'
+        xml_string += '<openSearch:itemsPerPage>20</openSearch:itemsPerPage>'
+        for item in json_data.get("contents", {}).get("twoColumnBrowseResultsRenderer", {}).get("tabs", []):
+            tab = item.get("tabRenderer", {})
+            section_list = tab.get("content", {}).get("sectionListRenderer", {}).get("contents", [])
+
+            for section in section_list:
+                if "itemSectionRenderer" in section:
+                    for video_item in section["itemSectionRenderer"].get("contents", []):
+                        if "videoRenderer" in video_item:
+                            videoData = video_item["videoRenderer"]
+                            videoId = videoData.get("videoId", "")
+                            title = videoData.get("title", {}).get("runs", [{}])[0].get("text", "")
+                            lengthText = videoData.get("lengthText", {}).get("simpleText", "")
+                            viewCount = videoData.get("viewCountText", {}).get("simpleText", "")
+                            authorName = videoData.get("longBylineText", {}).get("runs", [{}])[0].get("text", "")
+                            authorId = videoData.get("longBylineText", {}).get("runs", [{}])[0].get("navigationEndpoint", {}).get("browseEndpoint", {}).get("browseId", "")
+                            xml_string += '<entry>'
+                            xml_string += f'<id>http://{ip}:{port}/api/videos/{videoId}</id>'
+                            xml_string += f'<published>null</published>'
+                            xml_string += f'<title type="text">{self.escape_xml(title)}</title>'
+                            xml_string += f'<link rel="http://{ip}:{port}/api/videos/{videoId}/related"/>'
+                            xml_string += f'<author><name>{self.escape_xml(authorName)}</name><uri>https://www.youtube.com/channel/{authorId}</uri></author>'
+                            xml_string += '<media:group>'
+                            xml_string += f'<media:thumbnail yt:name="mqdefault" url="http://i.ytimg.com/vi/{videoId}/mqdefault.jpg" height="240" width="320" time="00:00:00"/>'
+                            xml_string += f'<yt:duration seconds="{lengthText}"/>'
+                            xml_string += f'<yt:uploaderId id="{authorId}">{authorId}</yt:uploaderId>'
+                            xml_string += f'<yt:videoid id="{videoId}">{videoId}</yt:videoid>'
+                            xml_string += f'<media:credit role="uploader" name="{self.escape_xml(authorName)}">{self.escape_xml(authorName)}</media:credit>'
+                            xml_string += '</media:group>'
+                            xml_string += f'<yt:statistics favoriteCount="0" viewCount="{self.escape_xml(viewCount)}"/>'
+                            xml_string += '</entry>'
+
+        xml_string += '</feed>'
+        return xml_string
+
+    def buildWatchHistoryXML(self, json_data, ip, port, lang, oauth_token):
         xml_string = '<?xml version="1.0" encoding="UTF-8"?>'
         xml_string += '<feed xmlns:openSearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:yt="http://www.youtube.com/xml/schemas/2015">'
         xml_string += '<title type="text">Videos</title>'
@@ -271,40 +313,18 @@ class InnerTube:
                     for item in item_section:
                         video_renderer = item.get("videoRenderer", {})
                         if not video_renderer:
-                            continue
-                        
+                            return redirect(f'/api/v2/watch_history?access_token={oauth_token}&lang={lang}')
                         videoId = video_renderer.get("videoId", "")
                         title = video_renderer.get("title", {}).get("runs", [{}])[0].get("text", "")
                         lengthText = video_renderer.get("lengthText", {}).get("simpleText", "")
                         viewCount = video_renderer.get("viewCountText", {}).get("simpleText", "").split()[0]
                         authorName = video_renderer.get("longBylineText", {}).get("runs", [{}])[0].get("text", "")
                         authorId = video_renderer.get("channelThumbnailSupportedRenderers", {}).get("channelThumbnailWithLinkRenderer", {}).get("navigationEndpoint", {}).get("browseEndpoint", {}).get("browseId", "")
-                        playerUrl = f"https://www.youtube.com/youtubei/v1/player?key=AIzaS=yAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&videoId={videoId}"
-                        headers = {
-                            'Content-Type': 'application/json',
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                        }
-
-                        payload = {
-                            "context": {
-                                "client": {
-                                    "hl": "en",
-                                    "gl": "US",
-                                    "clientName": "WEB",
-                                    "clientVersion": "2.20210714.01.00"
-                                }
-                            },
-                            "videoId": videoId,
-                            "params": ""
-                        }
-                        response = requests.post(playerUrl, json=payload, headers=headers)
-                        _jsonData = response.json()
-                        uploadDate = _jsonData['microformat']['playerMicroformatRenderer']['uploadDate']
                         if not videoId or not title:
-                            continue
+                            return redirect(f'/api/v2/watch_history?access_token={oauth_token}&lang={lang}')
                         xml_string += '<entry>'
                         xml_string += f'<id>http://{ip}:{port}/api/videos/{videoId}</id>'
-                        xml_string += f'<published>{uploadDate}</published>'
+                        xml_string += f'<published>null</published>'
                         xml_string += f'<title type="text">{self.escape_xml(title)}</title>'
                         xml_string += f'<link rel="http://{ip}:{port}/api/videos/{videoId}/related"/>'
                         xml_string += f'<author><name>{self.escape_xml(authorName)}</name><uri>https://www.youtube.com/channel/{authorId}</uri></author>'
@@ -764,7 +784,30 @@ class InnerTube:
         response = requests.post(url, json=payload, headers=headers)
         if response.status_code == 200:
             data = response.json()
-            xml_data = self.buildWatchHistoryXML(data, ip, port)
+            xml_data = self.buildWatchHistoryXML(data, ip, port, lang, oauth_token)
+            return Response(xml_data, mimetype='text/atom+xml')
+            
+    def watchHistory2(self, ip, port, lang, oauth_token):
+        url = f'https://www.youtube.com/youtubei/v1/browse?browseId=FEhistory&key=AIzaS=yAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&access_token={oauth_token}'
+        headers = {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        payload = {
+            "context": {
+                "client": {
+                    "hl": lang,  
+                    "gl": "US",  
+                    "clientName": "WEB",
+                    "clientVersion": "2.20210714.01.00"
+                }
+            }
+        }
+
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            xml_data = self.buildWatchHistory2XML(data, ip, port)
             return Response(xml_data, mimetype='text/atom+xml')
 
     def river(self, ip, port, oauth_token, lang):
