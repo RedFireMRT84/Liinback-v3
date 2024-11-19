@@ -343,7 +343,7 @@ class InnerTube:
 
         return xml_string
     def subscriptions(self, oauth_token):
-        url = f'https://www.youtube.com/youtubei/v1/browse?browseId=FEsubscriptions&key=AIzaS=yAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&access_token={oauth_token}'
+        url = f'https://www.youtube.com/youtubei/v1/browse?browseId=FEchannels&key=AIzaS=yAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&access_token={oauth_token}'
         headers = {
             'Content-Type': 'application/json',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -368,26 +368,31 @@ class InnerTube:
     def buildSubscriptions(self, json_data):
         xml_string = '<?xml version="1.0" encoding="UTF-8"?>'
         xml_string += '<feed xmlns:openSearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:yt="http://www.youtube.com/xml/schemas/2015">'
-        xml_string += '<link rel="next" type="application/atom+xml" href=f"http://{ip}:{port}/api/videos"/>'
+        xml_string += '<link rel="next" type="application/atom+xml" href=f"http://127.0.0.1/api/videos"/>'
         xml_string += '<title type="text">Subscriptions</title>'
         xml_string += '<generator ver="1.0" uri="http://kamil.cc/">Liinback data API</generator>'
         xml_string += '<openSearch:totalResults>0</openSearch:totalResults>'
         xml_string += '<openSearch:startIndex>1</openSearch:startIndex>'
         xml_string += '<openSearch:itemsPerPage>20</openSearch:itemsPerPage>'
-        for item in json_data.get("contents", {}).get("twoColumnBrowseResultsRenderer", {}).get("tabs", []):
-            tab = item.get("tabRenderer", {})
-            section_list = tab.get("content", {}).get("richGridRenderer", {}).get("contents", [])
-            
-            for section in section_list:
-                if "richItemRenderer" in section:
-                        video_data = section["richItemRenderer"].get("content", {}).get("videoRenderer", {})    
-                        author_name = video_data.get("longBylineText", {}).get("runs", [{}])[0].get("text", "")
-                        author_id = video_data.get("longBylineText", {}).get("runs", [{}])[0].get("navigationEndpoint", {}).get("browseEndpoint", {}).get("browseId", "")
-                        xml_string += '<entry>'
-                        xml_string += f'<yt:username="{self.escape_xml(author_name)}">{self.escape_xml(author_name)}</yt:username>'
-                        xml_string += f'<yt:channelId>{self.escape_xml(author_id)}>{self.escape_xml(author_id)}</yt:channelId>'
-                        xml_string += '</entry>'
-
+        
+        for item in json_data.get('contents', {}).get('twoColumnBrowseResultsRenderer', {}).get('tabs', []):
+            tab_content = item.get('tabRenderer', {}).get('content', {}).get('sectionListRenderer', {}).get('contents', [])
+            for section in tab_content:
+                if 'itemSectionRenderer' in section:
+                    channel_data = section.get('itemSectionRenderer', {}).get('contents', [])
+                    for channel in channel_data:
+                        if 'shelfRenderer' in channel:
+                            channel_info = channel.get('shelfRenderer', {}).get('content', {}).get('expandedShelfContentsRenderer', {}).get('items', [])
+                            for channel_item in channel_info:
+                                channel_renderer = channel_item.get('channelRenderer', {})
+                                if channel_renderer:
+                                    author_name = channel_renderer.get('title', {}).get('simpleText', '')
+                                    author_id = channel_renderer.get('channelId', '')
+                                    xml_string += '<entry>'
+                                    xml_string += f'<yt:username>{self.escape_xml(author_name)}</yt:username>'
+                                    xml_string += f'<yt:channelId>{self.escape_xml(author_id)}</yt:channelId>'
+                                    xml_string += '</entry>'
+        
         xml_string += '</feed>'
         return xml_string
 
