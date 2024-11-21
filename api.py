@@ -32,7 +32,7 @@ class Invidious:
             xml_string += '<yt:videoid id=\'' + self.escape_xml(item['videoId']) + '\'>' + self.escape_xml(item['videoId']) + '</yt:videoid>'
             xml_string += '<media:credit role=\'uploader\' name=\'' + self.escape_xml(item['author']) + '\'>' + self.escape_xml(item['author']) + '</media:credit>'
             xml_string += '</media:group>'
-            xml_string += f'<yt:statistics favoriteCount="0" viewCount="{item["viewCount"]} views"/>'
+            xml_string += f'<yt:statistics favoriteCount="0" viewCount="{item["viewCount"]}"/>'
             xml_string += '</entry>'
         xml_string += '</feed>'
         return xml_string
@@ -210,9 +210,9 @@ class InnerTube:
                             thumbnail_url = ''
                         if title_metadata and browse_id:
                             xml_string += '<entry>'
+                            xml_string += f'<title type=\'text\'>{self.escape_xml(title_metadata)}</title>'
                             xml_string += f'<yt:playlistId>{browse_id}</yt:playlistId>'
                             xml_string += f'<updated>0</updated>'
-                            xml_string += f'<title type=\'text\'>{self.escape_xml(title_metadata)}</title>'
                             xml_string += f"<link rel='self' type='application/atom+xml' href=f'http://{ip}:{port}/api/_playlists?id={self.escape_xml(browse_id)}&access_token={oauth_token}'/>"
                             xml_string += f'<yt:countHint>0</yt:countHint>'
                             if thumbnail_url:
@@ -248,7 +248,17 @@ class InnerTube:
 
         return Response('Failed to fetch playlists', status=500)
 
-    def buildWatchHistory2XML(self, json_data, ip, port):
+    def buildWatchHistory2XML(self, json_data, ip, port, lang):
+        viewCountLabels = {
+            'en': 'views',
+            'es': 'visualizaciones',
+            'fr': 'vues',
+            'de': 'Aufrufe',
+            'ja': '回視聴',
+            'nl': 'weergaven',
+            'it': 'visualizzazioni'
+        }
+        viewCountLabel = viewCountLabels.get(lang, 'views')
         xml_string = '<?xml version="1.0" encoding="UTF-8"?>'
         xml_string += '<feed xmlns:openSearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:yt="http://www.youtube.com/xml/schemas/2015">'
         xml_string += '<title type="text">Videos</title>'
@@ -284,21 +294,30 @@ class InnerTube:
                             xml_string += f'<yt:videoid id="{videoId}">{videoId}</yt:videoid>'
                             xml_string += f'<media:credit role="uploader" name="{self.escape_xml(authorName)}">{self.escape_xml(authorName)}</media:credit>'
                             xml_string += '</media:group>'
-                            xml_string += f'<yt:statistics favoriteCount="0" viewCount="{self.escape_xml(viewCount)}"/>'
+                            xml_string += f'<yt:statistics favoriteCount="0" viewCount="{self.escape_xml(viewCount)} {viewCountLabel}"/>'
                             xml_string += '</entry>'
 
         xml_string += '</feed>'
         return xml_string
 
     def buildWatchHistoryXML(self, json_data, ip, port, lang, oauth_token):
+        viewCountLabels = {
+            'en': 'views',
+            'es': 'visualizaciones',
+            'fr': 'vues',
+            'de': 'Aufrufe',
+            'ja': '回視聴',
+            'nl': 'weergaven',
+            'it': 'visualizzazioni'
+        }
+        viewCountLabel = viewCountLabels.get(lang, 'views')
         xml_string = '<?xml version="1.0" encoding="UTF-8"?>'
         xml_string += '<feed xmlns:openSearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:yt="http://www.youtube.com/xml/schemas/2015">'
         xml_string += '<title type="text">Videos</title>'
         xml_string += '<generator ver="1.0" uri="http://kamil.cc/">Liinback data API</generator>'
         xml_string += '<openSearch:totalResults>0</openSearch:totalResults>'
         xml_string += '<openSearch:startIndex>1</openSearch:startIndex>'
-        xml_string += '<openSearch:itemsPerPage>20</openSearch:itemsPerPage>'
-        
+        xml_string += '<openSearch:itemsPerPage>20</openSearch:itemsPerPage>'      
         try:
             video_items = json_data.get("contents", {}).get("twoColumnBrowseResultsRenderer", {}).get("tabs", [])
             video_list = []
@@ -335,7 +354,7 @@ class InnerTube:
                         xml_string += f'<yt:videoid id="{videoId}">{videoId}</yt:videoid>'
                         xml_string += f'<media:credit role="uploader" name="{self.escape_xml(authorName)}">{self.escape_xml(authorName)}</media:credit>'
                         xml_string += '</media:group>'
-                        xml_string += f'<yt:statistics favoriteCount="0" viewCount="{self.escape_xml(viewCount)}"/>'
+                        xml_string += f'<yt:statistics favoriteCount="0" viewCount="{self.escape_xml(viewCount)} {viewCountLabel}"/>'
                         xml_string += '</entry>'
 
         except Exception as e:
