@@ -5,7 +5,17 @@ from urllib.parse import quote_plus
 
 class Invidious:
         
-    def buildXML(self, json_data, ip, port):
+    def buildXML(self, json_data, ip, port, lang):
+        viewCountLabels = {
+            'en': 'views',
+            'es': 'visualizaciones',
+            'fr': 'vues',
+            'de': 'Aufrufe',
+            'ja': '回視聴',
+            'nl': 'weergaven',
+            'it': 'visualizzazioni'
+        }
+        viewCountLabel = viewCountLabels.get(lang, 'views')
         xml_string = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>'
         xml_string += '<feed xmlns:openSearch=\'http://a9.com/-/spec/opensearch/1.1/\' xmlns:media=\'http://search.yahoo.com/mrss/\' xmlns:yt=\'http://www.youtube.com/xml/schemas/2015\'>'
         xml_string += '<title type=\'text\'>Videos</title>'
@@ -32,7 +42,7 @@ class Invidious:
             xml_string += '<yt:videoid id=\'' + self.escape_xml(item['videoId']) + '\'>' + self.escape_xml(item['videoId']) + '</yt:videoid>'
             xml_string += '<media:credit role=\'uploader\' name=\'' + self.escape_xml(item['author']) + '\'>' + self.escape_xml(item['author']) + '</media:credit>'
             xml_string += '</media:group>'
-            xml_string += f'<yt:statistics favoriteCount="0" viewCount="{item["viewCount"]}"/>'
+            xml_string += f'<yt:statistics favoriteCount="0" viewCount="{item["viewCount"]} {viewCountLabel}"/>'
             xml_string += '</entry>'
         xml_string += '</feed>'
         return xml_string
@@ -107,13 +117,13 @@ class Invidious:
             error_message = {"error": "Invalid response format"}
             return jsonify(error_message), 500
 
-    def user_uploads(self, ip, port, channel_id=None):
+    def user_uploads(self, ip, port, lang, channel_id=None):
         channels_endpoint = "channels"
         response = requests.get(f"http://vid.puffyan.us/api/v1/{channels_endpoint}/{channel_id}/videos")
         if response.status_code == 200:
             json_data = response.json()
             videos = json_data.get("videos", [])
-            xml_data = self.buildXML(videos, ip, port)
+            xml_data = self.buildXML(videos, ip, port, lang)
             return Response(xml_data, mimetype='text/atom+xml')
         else:
             error_message = {"error": "Invalid response format"}
@@ -138,7 +148,7 @@ class InnerTube:
             url += f'&access_token={oauth_token}'
         headers = {
             'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0'
         }
         
         payload = {
@@ -147,7 +157,7 @@ class InnerTube:
                     "hl": lang,
                     "gl": "US",
                     "clientName": "WEB",
-                    "clientVersion": "2.20210714.01.00"
+                    "clientVersion": "2.0"
                 }
             }
         }
