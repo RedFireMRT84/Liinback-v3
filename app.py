@@ -428,8 +428,9 @@ def subscriptions(oauthToken):
 def userUploads(channelId):
     ip = getIp()
     port = getPort()
+    lang = request.args.get('lang', 'en')
     oauthToken = request.args.get('access_token')
-    return invidious.user_uploads(ip, port, channelId)
+    return invidious.user_uploads(ip, port, lang, channelId)
 @app.route('/api/_playlists', methods=['GET'])
 def playlistId():
     ip = getIp()
