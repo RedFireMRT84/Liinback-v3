@@ -5,7 +5,7 @@ Liinback mostly uses InnerTube more than Invidious for more features. Invidious 
 Your playlists will not appear in your "My YouTube" menu, but instead in the main menu on where it includes your YouTube profile categories/types of YouTube videos such as gaming, sports, trendings, and other categories.
 
 The only format that Liinback supports for videos to display and load on the Nintendo Wii is a (.webm) video format in only VP8. The good news is that the program could load videos faster and display in any sizes.
-The maximum quality though is 360p. But the bad news is that it's also not perfect, which the YouTube application on the Wii can fail to load videos by either crashing your Wii, playing a video that is corrupted, or the channel displays:
+The maximum quality though is 360p. But the bad news is that it's also not perfect, which the YouTube application on the Wii can fail to load videos by either crashing your Wii, or the channel displays:
 "An unknown error has occurred. Please try again later." So please do not say that or accuse me that I quote on quote, "didn't warn you", thank you very much. If you don't like that and if you really want to watch YouTube
 on your Nintendo Wii in another method without having to deal with this kind of mess anymore, you could go ahead and search on https://www.google.com, "RiiTube".
 
